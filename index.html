@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>자분뽀 웹툰</title>
+<style>
+/* ===================== CSS : 보이는 모습 ===================== */
+* { box-sizing: border-box; }
+body { margin: 0; background: #e0e0e0; font-family: sans-serif; color: #333; }
+
+/* 휴대폰 화면 크기로 가운데 고정 */
+.app { max-width: 420px; margin: 0 auto; min-height: 100vh; background: #f5f5f5; padding-bottom: 80px; position: relative; }
+
+/* 상단바 */
+.topbar { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #ffffff; }
+.logo { font-size: 20px; font-weight: 700; color: #333; }
+.search { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #999; }
+
+/* 이벤트 배너 */
+.banner { position: relative; margin: 16px 20px; border-radius: 8px; overflow: hidden; }
+.banner-img { width: 100%; height: 190px; object-fit: cover; display: block; }
+.banner-text { position: absolute; left: 20px; bottom: 20px; }
+.badge { display: inline-block; font-size: 12px; font-weight: 700; background: #ffffff; color: #555; padding: 4px 8px; border-radius: 4px; animation: float 2s infinite; }
+.banner-title { font-size: 24px; font-weight: 700; color: #ffffff; margin: 8px 0 4px; }
+.banner-sub { font-size: 14px; color: #f0f0f0; margin: 0 0 12px; }
+
+/* 버튼 */
+.btn { font-size: 14px; font-weight: 700; padding: 10px 18px; border: none; border-radius: 4px; background: #777777; color: #ffffff; cursor: pointer; transition: all 0.3s; }
+.btn:hover { background: #555555; transform: scale(1.05); }
+
+/* 섹션 제목 */
+.section-title { font-size: 18px; font-weight: 700; margin: 24px 20px 12px; }
+
+/* 요일 탭 */
+.days { display: flex; gap: 6px; padding: 0 20px; }
+.day { flex: 1; font-size: 14px; padding: 8px 0; border: 1px solid #ccc; border-radius: 4px; background: #ffffff; color: #666; cursor: pointer; }
+.day.active { background: #777777; color: #ffffff; border-color: #777777; }
+
+/* 작품 카드 (가로 스크롤) */
+.cards { display: flex; gap: 12px; padding: 12px 20px; overflow-x: auto; }
+.card { flex: 0 0 120px; }
+.card-img { width: 120px; height: 160px; object-fit: cover; border-radius: 6px; display: block; }
+.card-title { font-size: 14px; font-weight: 700; margin: 8px 0 2px; }
+.card-genre { font-size: 12px; color: #888; }
+.like { margin-top: 6px; font-size: 12px; padding: 4px 8px; border: 1px solid #aaa; border-radius: 4px; background: #fff; color: #666; cursor: pointer; }
+.like.on { background: #555; color: #fff; border-color: #555; }
+
+/* 하단 탭바 */
+.tabbar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 420px; display: flex; background: #ffffff; border-top: 1px solid #ddd; }
+.tab { flex: 1; text-align: center; font-size: 12px; padding: 14px 0; color: #999; }
+.tab.active { color: #333; font-weight: 700; }
+
+/* 토스트 알림 */
+.toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #333; color: #fff; font-size: 14px; padding: 10px 18px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.toast.show { opacity: 1; }
+
+/* 애니메이션 : 둥실둥실 */
+@keyframes float {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+<!-- ===================== HTML : 뭐가 있는지 ===================== -->
+<div class="app">
+
+  <header class="topbar">
+    <div class="logo">자분뽀 웹툰</div>
+    <div class="search"></div>
+  </header>
+
+  <section class="banner">
+    <img class="banner-img" src="images/banner.svg" alt="이벤트 배너">
+    <div class="banner-text">
+      <span class="badge">EVENT</span>
+      <h2 class="banner-title">가을 신작 3화 무료</h2>
+      <p class="banner-sub">10월 한 달 동안만</p>
+      <button class="btn" id="bannerBtn">지금 보러가기</button>
+    </div>
+  </section>
+
+  <h3 class="section-title">요일별 웹툰</h3>
+  <div class="days" id="days">
+    <button class="day active" data-day="mon">월</button>
+    <button class="day" data-day="tue">화</button>
+    <button class="day" data-day="wed">수</button>
+    <button class="day" data-day="thu">목</button>
+    <button class="day" data-day="fri">금</button>
+  </div>
+  <div class="cards" id="cards"></div>
+
+</div>
+
+<nav class="tabbar">
+  <div class="tab active">홈</div>
+  <div class="tab">요일</div>
+  <div class="tab">보관함</div>
+  <div class="tab">MY</div>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== JS : 어떻게 반응하는지 ===================== */
+
+// 가짜 작품 데이터 (나중엔 서버에서 받아오는 부분)
+const works = {
+  mon: [{t:'작품 A', g:'로맨스', img:'cover1.svg'}, {t:'작품 B', g:'판타지', img:'cover2.svg'}, {t:'작품 C', g:'드라마', img:'cover3.svg'}],
+  tue: [{t:'작품 D', g:'액션',   img:'cover4.svg'}, {t:'작품 E', g:'로맨스', img:'cover5.svg'}],
+  wed: [{t:'작품 F', g:'스릴러', img:'cover6.svg'}, {t:'작품 A', g:'로맨스', img:'cover1.svg'}, {t:'작품 D', g:'액션', img:'cover4.svg'}],
+  thu: [{t:'작품 B', g:'판타지', img:'cover2.svg'}, {t:'작품 E', g:'로맨스', img:'cover5.svg'}],
+  fri: [{t:'작품 C', g:'드라마', img:'cover3.svg'}, {t:'작품 F', g:'스릴러', img:'cover6.svg'}, {t:'작품 B', g:'판타지', img:'cover2.svg'}]
+};
+
+// 카드 목록 그리기 : JS가 HTML을 갈아끼우는 부분
+function showCards(day) {
+  document.getElementById('cards').innerHTML = works[day].map(w => `
+    <div class="card">
+      <img class="card-img" src="images/${w.img}" alt="${w.t}">
+      <div class="card-title">${w.t}</div>
+      <div class="card-genre">${w.g}</div>
+      <button class="like">♡ 찜</button>
+    </div>`).join('');
+}
+
+// 토스트 알림 띄우기
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1500);
+}
+
+// 요일 탭 누르면 : 버튼 색 바꾸고 목록 바꾸기
+document.getElementById('days').addEventListener('click', e => {
+  if (!e.target.dataset.day) return;
+  document.querySelectorAll('.day').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  showCards(e.target.dataset.day);
+});
+
+// 찜 버튼 누르면 : 켜고 끄기 + 알림
+document.getElementById('cards').addEventListener('click', e => {
+  if (!e.target.classList.contains('like')) return;
+  const on = e.target.classList.toggle('on');
+  e.target.textContent = on ? '♥ 찜' : '♡ 찜';
+  toast(on ? '찜했어요' : '찜 해제했어요');
+});
+
+// 배너 버튼
+document.getElementById('bannerBtn').addEventListener('click', () => toast('이벤트 페이지 준비 중이에요'));
+
+showCards('mon');
+</script>
+</body>
+</html>

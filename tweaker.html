@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HTML 조절기 — 고친 걸 그대로 Claude에게</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e8ecef;--panel:#fff;--ink:#1d2430;--sub:#5d6877;--line:#cfd6dd;--pick:#2f6bff;--code:#f3f5f7;--warn:#c2410c;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1e24;--panel:#242a32;--ink:#e6eaef;--sub:#9aa5b2;--line:#3a424d;--pick:#6c95ff;--code:#1d2229;--warn:#fb923c}}
+:root[data-theme="dark"]{--bg:#1a1e24;--panel:#242a32;--ink:#e6eaef;--sub:#9aa5b2;--line:#3a424d;--pick:#6c95ff;--code:#1d2229;--warn:#fb923c}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans KR",system-ui,sans-serif;font-size:14px}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:auto minmax(0,1fr);height:100%;gap:0}
+@media (max-width:900px){.app{grid-template-columns:1fr;grid-template-rows:auto 60vh auto;height:auto}}
+header{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:1rem;margin:0 12px 0 0}
+header .hint{color:var(--sub);font-size:.82rem}
+.stage{padding:14px;min-height:0}
+iframe{width:100%;height:100%;border:1px solid var(--line);border-radius:8px;background:#fff}
+aside{background:var(--panel);border-left:1px solid var(--line);padding:14px;overflow:auto}
+h2{font-size:.9rem;margin:0 0 4px}
+.sel{font-family:ui-monospace,Menlo,monospace;font-size:.78rem;color:var(--sub);word-break:break-all;margin-bottom:12px}
+.group{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.group[hidden]{display:none}
+.row{display:grid;grid-template-columns:72px 1fr 56px;align-items:center;gap:8px;margin-bottom:8px;font-size:.82rem}
+.row output{text-align:right;color:var(--sub);font-variant-numeric:tabular-nums}
+.row input[type=color]{width:100%;height:26px;border:1px solid var(--line);border-radius:4px;background:none}
+textarea{width:100%;font:inherit;font-size:.85rem;border:1px solid var(--line);border-radius:6px;padding:6px;background:var(--code);color:var(--ink);resize:vertical}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+button,.filebtn{font:inherit;font-size:.82rem;padding:7px 11px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button.main{background:var(--pick);border-color:var(--pick);color:#fff}
+button.danger{color:var(--warn);border-color:var(--warn)}
+button:focus-visible,.filebtn:focus-within{outline:2px solid var(--pick);outline-offset:2px}
+.filebtn input{display:none}
+pre{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:10px;font-size:.76rem;white-space:pre-wrap;word-break:break-all;min-height:80px;max-height:260px;overflow:auto;margin:10px 0}
+.toast{font-size:.78rem;color:var(--pick);min-height:1.2em;margin-top:6px}
+.empty{color:var(--sub);font-size:.85rem}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>HTML 조절기</h1>
+    <label class="filebtn">HTML 파일 열기<input type="file" id="openHtml" accept=".html,.htm"></label>
+    <button id="loadSample">예시 페이지</button>
+    <span class="hint">페이지 안 요소를 클릭 → 오른쪽에서 조절 → 드래그로 위치 이동. 원본 파일은 안 바뀝니다.</span>
+  </header>
+
+  <div class="stage"><iframe id="view" title="편집할 페이지"></iframe></div>
+
+  <aside>
+    <h2 id="selName">요소를 클릭하세요</h2>
+    <div class="sel" id="selPath"></div>
+
+    <div class="group" id="gText" hidden>
+      <h2>글자</h2>
+      <div id="textControls"></div>
+      <label class="row" style="grid-template-columns:72px 1fr"><span>문구</span><textarea id="textEdit" rows="2"></textarea></label>
+    </div>
+
+    <div class="group" id="gImg" hidden>
+      <h2>이미지</h2>
+      <div id="imgControls"></div>
+      <div class="btns">
+        <label class="filebtn">이미지 교체<input type="file" id="swapImg" accept="image/*"></label>
+      </div>
+    </div>
+
+    <div class="group" id="gBox" hidden>
+      <h2>위치</h2>
+      <div id="boxControls"></div>
+      <div class="btns">
+        <label class="filebtn">아래에 이미지 추가<input type="file" id="addImg" accept="image/*"></label>
+        <button class="danger" id="del">이 요소 삭제</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Claude에게 보낼 수정 요청</h2>
+      <pre id="out" class="empty">아직 바꾼 게 없어요.</pre>
+      <div class="btns">
+        <button class="main" id="copy">복사</button>
+        <button id="reset">전부 되돌리기</button>
+      </div>
+      <div class="toast" id="toast"></div>
+    </div>
+  </aside>
+</div>
+
+<script>
+const SAMPLE = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><style>
+body{margin:0;font-family:sans-serif;background:#faf7f2;color:#222}
+.hero{padding:48px 40px;background:linear-gradient(160deg,#2b1d4e,#6b2f6f 60%,#d8586b);color:#fff}
+.badge{display:inline-block;background:#ffd84d;color:#2b1d4e;font-size:13px;font-weight:700;padding:4px 10px;border-radius:3px}
+.hero h1{font-size:44px;line-height:1.15;letter-spacing:-1px;margin:18px 0 10px}
+.hero p{font-size:17px;color:#f3dce6;margin:0 0 24px}
+.cta{display:inline-block;background:#fff;color:#6b2f6f;font-weight:700;padding:12px 22px;border-radius:30px;text-decoration:none}
+.cards{display:flex;gap:16px;padding:32px 40px;flex-wrap:wrap}
+.card{width:200px}
+.card img{width:200px;height:260px;object-fit:cover;border-radius:6px;display:block}
+.card h3{font-size:16px;margin:10px 0 4px}
+.card span{font-size:13px;color:#777}
+</style></head><body>
+<section class="hero"><span class="badge">가을 신작 이벤트</span><h1>첫 화부터<br>정주행 시작</h1><p>10월 한 달, 신작 3화 무료로 열어드려요.</p><a class="cta" href="#">지금 보러가기</a></section>
+<section class="cards">
+<div class="card"><img src="images/cover1.jpg" alt="작품1"><h3>작품 제목 A</h3><span>로맨스 · 매주 월</span></div>
+<div class="card"><img src="images/cover2.jpg" alt="작품2"><h3>작품 제목 B</h3><span>판타지 · 매주 수</span></div>
+</section></body></html>`;
+
+const TEXT_PROPS = [
+  {k:'font-size',label:'크기',min:8,max:120,step:1,unit:'px'},
+  {k:'font-weight',label:'굵기',min:100,max:900,step:100,unit:''},
+  {k:'letter-spacing',label:'자간',min:-5,max:10,step:0.5,unit:'px'},
+  {k:'line-height',label:'줄 간격',min:0.8,max:2.5,step:0.05,unit:''},
+  {k:'color',label:'색',type:'color'}
+];
+const IMG_PROPS = [
+  {k:'width',label:'너비',min:20,max:1200,step:1,unit:'px'},
+  {k:'height',label:'높이',min:20,max:1200,step:1,unit:'px'},
+  {k:'border-radius',label:'모서리',min:0,max:200,step:1,unit:'px'},
+  {k:'opacity',label:'투명도',min:0,max:1,step:0.05,unit:''}
+];
+const BOX_PROPS = [
+  {k:'left',label:'가로 이동',min:-600,max:600,step:1,unit:'px'},
+  {k:'top',label:'세로 이동',min:-600,max:600,step:1,unit:'px'}
+];
+
+const $ = id => document.getElementById(id);
+const view = $('view');
+let doc, cur, fileName = 'index.html';
+let orig = new Map();          // element -> 원래 computed 값
+let ops = [];                  // 문구/이미지/삭제/추가 기록
+
+function load(html, name){
+  fileName = name || 'index.html';
+  orig = new Map(); ops = []; cur = null;
+  view.srcdoc = html;
+  view.onload = setup;
+}
+
+function setup(){
+  doc = view.contentDocument;
+  const st = doc.createElement('style');
+  st.textContent = '[data-tw-hover]{outline:1px dashed #2f6bff!important;outline-offset:2px}[data-tw-on]{outline:2px solid #2f6bff!important;outline-offset:2px}';
+  doc.head.appendChild(st);
+  doc.addEventListener('mouseover', e=>{ e.target.setAttribute('data-tw-hover',''); });
+  doc.addEventListener('mouseout', e=>{ e.target.removeAttribute('data-tw-hover'); });
+  doc.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); }, true);
+  doc.addEventListener('pointerdown', startDrag, true);
+  $('selName').textContent = '요소를 클릭하세요'; $('selPath').textContent = '';
+  ['gText','gImg','gBox'].forEach(g=>$(g).hidden = true);
+  render();
+}
+
+function selectorOf(el){
+  if(el.id) return '#' + el.id;
+  const parts = [];
+  while(el && el.nodeType === 1 && el.tagName !== 'BODY' && el.tagName !== 'HTML'){
+    let s = el.tagName.toLowerCase();
+    const cls = [...el.classList].filter(c=>!c.startsWith('tw-'));
+    if(cls.length) s += '.' + cls.join('.');
+    const sib = el.parentElement ? [...el.parentElement.children].filter(c=>c.tagName===el.tagName) : [];
+    if(sib.length > 1) s += ':nth-of-type(' + (sib.indexOf(el)+1) + ')';
+    parts.unshift(s);
+    if(el.id){ parts[0] = '#' + el.id; break; }
+    el = el.parentElement;
+    if(parts.length >= 3) break;
+  }
+  return parts.join(' > ');
+}
+function describe(el){
+  const t = (el.textContent||'').trim().replace(/\s+/g,' ').slice(0,20);
+  return el.tagName === 'IMG' ? '이미지(' + (el.getAttribute('src')||'').split('/').pop() + ')' : (t ? '"' + t + '"' : el.tagName.toLowerCase());
+}
+function hex(rgb){ const m = rgb.match(/\d+(\.\d+)?/g); return m ? '#' + m.slice(0,3).map(n=>(+n|0).toString(16).padStart(2,'0')).join('') : '#000000'; }
+
+function read(el){
+  const cs = view.contentWindow.getComputedStyle(el), fs = parseFloat(cs.fontSize);
+  return {
+    'font-size':fs, 'font-weight':+cs.fontWeight,
+    'letter-spacing': cs.letterSpacing==='normal'?0:parseFloat(cs.letterSpacing),
+    'line-height': cs.lineHeight==='normal'?1.2:+(parseFloat(cs.lineHeight)/fs).toFixed(2),
+    'color':hex(cs.color),
+    'width':parseFloat(cs.width)||0,'height':parseFloat(cs.height)||0,
+    'border-radius':parseFloat(cs.borderTopLeftRadius)||0,'opacity':+cs.opacity,
+    'left': parseFloat(el.style.left)||0, 'top': parseFloat(el.style.top)||0
+  };
+}
+function remember(el){ if(!orig.has(el)) orig.set(el, {v:read(el), sel:selectorOf(el), name:describe(el), text:el.textContent, src:el.getAttribute('src')}); }
+const fmt = (p,v) => p.type==='color' ? v : v + p.unit;
+
+function buildControls(box, props, el){
+  box.innerHTML = '';
+  const now = read(el);
+  props.forEach(p=>{
+    const row = document.createElement('label'); row.className = 'row';
+    const v = now[p.k];
+    row.innerHTML = '<span>'+p.label+'</span>' + (p.type==='color'
+      ? '<input type="color" value="'+v+'"><output></output>'
+      : '<input type="range" min="'+p.min+'" max="'+p.max+'" step="'+p.step+'" value="'+v+'"><output>'+fmt(p,v)+'</output>');
+    const inp = row.querySelector('input'), out = row.querySelector('output');
+    inp.addEventListener('input', ()=>{
+      if(p.k==='left'||p.k==='top'){ if(view.contentWindow.getComputedStyle(el).position==='static') el.style.position='relative'; }
+      el.style.setProperty(p.k, fmt(p, inp.value));
+      if(p.type!=='color') out.textContent = fmt(p, inp.value);
+      render();
+    });
+    box.appendChild(row);
+  });
+}
+
+function select(el){
+  if(cur) cur.removeAttribute('data-tw-on');
+  cur = el; el.setAttribute('data-tw-on','');
+  remember(el);
+  $('selName').textContent = describe(el);
+  $('selPath').textContent = orig.get(el).sel;
+  const isImg = el.tagName === 'IMG';
+  const hasText = !isImg && el.children.length === 0 && el.textContent.trim().length > 0;
+  $('gText').hidden = isImg;
+  $('gImg').hidden = !isImg;
+  $('gBox').hidden = false;
+  if(!isImg){ buildControls($('textControls'), TEXT_PROPS, el); }
+  if(isImg){ buildControls($('imgControls'), IMG_PROPS, el); }
+  buildControls($('boxControls'), BOX_PROPS, el);
+  const ta = $('textEdit');
+  ta.disabled = !hasText; ta.value = hasText ? el.textContent : '';
+  ta.placeholder = hasText ? '' : '안에 다른 요소가 있어서 여기선 문구를 못 바꿔요. 더 안쪽 글자를 클릭하세요.';
+}
+
+$('textEdit').addEventListener('input', e=>{ if(cur){ cur.textContent = e.target.value; render(); } });
+
+/* 드래그 이동 */
+function startDrag(e){
+  const el = e.target;
+  if(el === doc.body || el === doc.documentElement) return;
+  e.preventDefault();
+  select(el);
+  const sx = e.clientX, sy = e.clientY, st = read(el);
+  let moved = false;
+  const move = ev=>{
+    const dx = ev.clientX - sx, dy = ev.clientY - sy;
+    if(!moved && Math.abs(dx)+Math.abs(dy) < 4) return;
+    moved = true;
+    if(view.contentWindow.getComputedStyle(el).position==='static') el.style.position='relative';
+    el.style.left = Math.round(st.left + dx) + 'px';
+    el.style.top  = Math.round(st.top + dy) + 'px';
+    render();
+  };
+  const up = ()=>{ doc.removeEventListener('pointermove', move); doc.removeEventListener('pointerup', up); if(moved) select(el); };
+  doc.addEventListener('pointermove', move); doc.addEventListener('pointerup', up);
+}
+
+/* 이미지 교체·추가·삭제 */
+function readFile(f){ return new Promise(r=>{ const fr = new FileReader(); fr.onload = ()=>r(fr.result); fr.readAsDataURL(f); }); }
+$('swapImg').addEventListener('change', async e=>{
+  const f = e.target.files[0]; if(!f || !cur) return;
+  cur.src = await readFile(f);
+  ops = ops.filter(o=>!(o.type==='swap' && o.el===cur));
+  ops.push({type:'swap', el:cur, file:f.name});
+  e.target.value=''; render();
+});
+$('addImg').addEventListener('change', async e=>{
+  const f = e.target.files[0]; if(!f || !cur) return;
+  const img = doc.createElement('img');
+  img.src = await readFile(f); img.alt = ''; img.style.maxWidth = '100%'; img.style.display = 'block';
+  cur.insertAdjacentElement('afterend', img);
+  ops.push({type:'add', el:img, after:orig.get(cur).sel, afterName:orig.get(cur).name, file:f.name});
+  e.target.value=''; select(img); render();
+});
+$('del').addEventListener('click', ()=>{
+  if(!cur) return;
+  const added = ops.find(o=>o.type==='add' && o.el===cur);
+  if(added){ ops = ops.filter(o=>o!==added); }
+  else ops.push({type:'del', sel:orig.get(cur).sel, name:orig.get(cur).name});
+  cur.remove(); orig.delete(cur); cur = null;
+  ['gText','gImg','gBox'].forEach(g=>$(g).hidden = true);
+  $('selName').textContent = '요소를 클릭하세요'; $('selPath').textContent = '';
+  render();
+});
+
+/* 결과 문장 만들기 */
+function render(){
+  const cssBlocks = [], htmlLines = [];
+  const all = [...TEXT_PROPS, ...IMG_PROPS, ...BOX_PROPS];
+  orig.forEach((o, el)=>{
+    if(!el.isConnected || ops.some(x=>x.type==='add' && x.el===el)) return;
+    const n = read(el), lines = [];
+    all.forEach(p=>{
+      if(!el.style.getPropertyValue(p.k)) return;
+      const a = o.v[p.k], b = n[p.k];
+      if(p.type==='color' ? a!==b : Math.abs(a-b) > 0.001) lines.push('  '+p.k+': '+fmt(p,b)+';  /* 원래 '+fmt(p,a)+' */');
+    });
+    if(lines.length && (el.style.left||el.style.top) && el.style.position==='relative') lines.unshift('  position: relative;');
+    if(lines.length) cssBlocks.push(o.sel + ' {  /* ' + o.name + ' */\n' + lines.join('\n') + '\n}');
+    if(el.tagName!=='IMG' && el.children.length===0 && el.textContent !== o.text)
+      htmlLines.push('- ' + o.sel + ' 의 문구를 "' + el.textContent.trim() + '" 로 바꿔줘. (원래: "' + o.text.trim() + '")');
+  });
+  ops.forEach(o=>{
+    if(o.type==='swap') htmlLines.push('- ' + orig.get(o.el).sel + ' 이미지를 images/' + o.file + ' 로 교체해줘. (원래: ' + orig.get(o.el).src + ') ※ 파일은 내가 images 폴더에 넣어둘게.');
+    if(o.type==='add')  htmlLines.push('- ' + o.after + ' (' + o.afterName + ') 바로 아래에 images/' + o.file + ' 이미지를 추가해줘. ※ 파일은 내가 images 폴더에 넣어둘게.');
+    if(o.type==='del')  htmlLines.push('- ' + o.sel + ' (' + o.name + ') 요소를 삭제해줘.');
+  });
+  const out = $('out');
+  if(!cssBlocks.length && !htmlLines.length){ out.textContent = '아직 바꾼 게 없어요.'; out.classList.add('empty'); return; }
+  out.classList.remove('empty');
+  let t = fileName + ' 을 아래대로 수정해줘. 말한 것 말고는 건드리지 마.\n';
+  if(cssBlocks.length) t += '\n[CSS 변경]\n' + cssBlocks.join('\n\n') + '\n';
+  if(htmlLines.length) t += '\n[HTML 변경]\n' + htmlLines.join('\n') + '\n';
+  t += '\n수정 끝나면 바뀐 부분 요약하고 커밋해줘.';
+  out.textContent = t;
+}
+
+$('copy').onclick = async ()=>{
+  const t = $('out').textContent, toast = $('toast');
+  try{ await navigator.clipboard.writeText(t); toast.textContent = '복사됨. Claude Code에 붙여넣으세요.'; }
+  catch{ const r = document.createRange(); r.selectNodeContents($('out')); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+         toast.textContent = '자동 복사가 막혔어요. 선택된 글을 Ctrl/Cmd+C로 복사하세요.'; }
+  setTimeout(()=>toast.textContent='', 3000);
+};
+$('reset').onclick = ()=>{ if(confirm('바꾼 걸 전부 되돌릴까요?')) load(lastHtml, fileName); };
+
+let lastHtml = SAMPLE;
+$('openHtml').addEventListener('change', e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const fr = new FileReader(); fr.onload = ()=>{ lastHtml = fr.result; load(lastHtml, f.name); }; fr.readAsText(f);
+  e.target.value='';
+});
+$('loadSample').onclick = ()=>{ lastHtml = SAMPLE; load(SAMPLE, 'index.html'); };
+load(SAMPLE, 'index.html');
+</script>
+</body>
+</html>
