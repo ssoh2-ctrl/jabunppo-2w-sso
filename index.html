@@ -21,9 +21,9 @@ body { margin: 0; background: #e0e0e0; font-family: sans-serif; color: #333; }
 .banner { position: relative; margin: 16px 20px; border-radius: 8px; overflow: hidden; }
 .banner-img { width: 100%; height: 190px; object-fit: cover; display: block; }
 .banner-text { position: absolute; left: 20px; bottom: 20px; }
-.badge { display: inline-block; font-size: 12px; font-weight: 700; background: #ffffff; color: #555; padding: 4px 8px; border-radius: 4px; animation: float 2s infinite; }
-.banner-title { font-size: 24px; font-weight: 700; color: #ffffff; margin: 8px 0 4px; }
-.banner-sub { font-size: 14px; color: #f0f0f0; margin: 0 0 12px; }
+.badge { display: inline-block; font-size: 12px; font-weight: 700; background: #ffffff; color: #555; padding: 4px 8px; border-radius: 4px; animation: float 2s infinite; position: relative; left: 291px; top: -6px; }
+.banner-title { font-size: 24px; font-weight: 700; color: #424d46; margin: 8px 0 4px; position: relative; top: -44px; }
+.banner-sub { font-size: 14px; color: #808080; margin: 0 0 12px; font-weight: 600; letter-spacing: 4px; }
 
 /* 버튼 */
 .btn { font-size: 14px; font-weight: 700; padding: 10px 18px; border: none; border-radius: 4px; background: #777777; color: #ffffff; cursor: pointer; transition: all 0.3s; }
@@ -73,16 +73,16 @@ body { margin: 0; background: #e0e0e0; font-family: sans-serif; color: #333; }
   </header>
 
   <section class="banner">
-    <img class="banner-img" src="images/banner.svg" alt="이벤트 배너">
+    <img class="banner-img" src="images/banner-custom.jpg" alt="이벤트 배너">
     <div class="banner-text">
       <span class="badge">EVENT</span>
-      <h2 class="banner-title">가을 신작 3화 무료</h2>
-      <p class="banner-sub">10월 한 달 동안만</p>
-      <button class="btn" id="bannerBtn">지금 보러가기</button>
+      <h2 class="banner-title">집에 가고 싶음.....</h2>
+      <p class="banner-sub">12개월 내내.............</p>
+      <button class="btn" id="bannerBtn">지금 집에 가기</button>
     </div>
   </section>
 
-  <h3 class="section-title">요일별 웹툰</h3>
+  <h3 class="section-title">요일별 기...부 ㄴ..........</h3>
   <div class="days" id="days">
     <button class="day active" data-day="mon">월</button>
     <button class="day" data-day="tue">화</button>
@@ -108,11 +108,11 @@ body { margin: 0; background: #e0e0e0; font-family: sans-serif; color: #333; }
 
 // 가짜 작품 데이터 (나중엔 서버에서 받아오는 부분)
 const works = {
-  mon: [{t:'작품 A', g:'로맨스', img:'cover1.svg'}, {t:'작품 B', g:'판타지', img:'cover2.svg'}, {t:'작품 C', g:'드라마', img:'cover3.svg'}],
-  tue: [{t:'작품 D', g:'액션',   img:'cover4.svg'}, {t:'작품 E', g:'로맨스', img:'cover5.svg'}],
-  wed: [{t:'작품 F', g:'스릴러', img:'cover6.svg'}, {t:'작품 A', g:'로맨스', img:'cover1.svg'}, {t:'작품 D', g:'액션', img:'cover4.svg'}],
-  thu: [{t:'작품 B', g:'판타지', img:'cover2.svg'}, {t:'작품 E', g:'로맨스', img:'cover5.svg'}],
-  fri: [{t:'작품 C', g:'드라마', img:'cover3.svg'}, {t:'작품 F', g:'스릴러', img:'cover6.svg'}, {t:'작품 B', g:'판타지', img:'cover2.svg'}]
+  mon: [{t:'ㅠ', g:'ㅠ', img:'cover-a.png'}, {t:'ㅠ', g:'ㅠ', img:'cover-b.jpg'}],
+  tue: [{t:'ㅠ', g:'ㅠ', img:'cover4.svg'}, {t:'ㅠ', g:'ㅠ', img:'cover5.svg'}, {t:'ㅠ', g:'ㅠ', img:'cover6.svg'}],
+  wed: [{t:'ㅠㅠㅠ', g:'ㅠㅠㅠ', img:'cover1.svg'}, {t:'ㅠㅠㅠ', g:'ㅠㅠㅠ', img:'cover2.svg'}, {t:'ㅠㅠㅠ', g:'ㅠㅠㅠ', img:'cover3.svg'}],
+  thu: [{t:'ㅠㅠㅠㅠㅠㅠㅠ', g:'ㅠㅠㅠㅠㅠㅠㅠ', img:'cover4.svg'}, {t:'ㅠㅠㅠㅠㅠㅠㅠ', g:'ㅠㅠㅠㅠㅠㅠㅠ', img:'cover5.svg'}, {t:'ㅠㅠㅠㅠㅠㅠㅠ', g:'ㅠㅠㅠㅠㅠㅠㅠ', img:'cover6.svg'}],
+  fri: [{t:'작품 C', g:'드라마', img:'cover-c.jpg'}, {t:'작품 F', g:'스릴러', img:'cover6.svg'}, {t:'작품 B', g:'판타지', img:'cover-b.jpg'}]
 };
 
 // 카드 목록 그리기 : JS가 HTML을 갈아끼우는 부분
